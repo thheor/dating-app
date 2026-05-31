@@ -2,8 +2,12 @@
 #include <string>
 using namespace std;
 
+int currentId = 1;
+
+template <typename T> int idBinarySearch(T &arr, int id);
 template <typename T> T input(string text);
 template <> string input(string text);
+template <typename T> T binarySearch(T arr[], T target, int size);
 
 template <typename T> struct Array {
   int length;
@@ -30,8 +34,12 @@ template <typename T> struct Array {
 
   void removeAt(int index) {
     T *newData = new T[capacity];
-    for (int i = index; i < length - 1; i++) {
-      newData[i] = data[i + 1];
+    for (int i = 0; i < length - 1; i++) {
+      if (i >= index) {
+        newData[i] = data[i + 1];
+      } else {
+        newData[i] = data[i];
+      }
     }
 
     length--;
@@ -46,24 +54,27 @@ template <typename T> struct Array {
 
   T at(int index) { return data[index]; }
 
-  void print() {
-    for (int i = 0; i < length; i++) {
-      cout << data[i] << "\n";
+  int end() { return length == 0 ? 0 : length - 1; }
+
+  bool empty() {
+    if (length > 0) {
+      return false;
     }
+    return true;
   }
 };
 
 class CSV {
 private:
-  string *ptr = nullptr;
-  Array<Array<string>> csv;
+  FILE *fptr;
   string filePath;
 
 public:
+  Array<Array<string>> csv;
+  int row = 0;
   CSV(string path) : filePath(path) {}
 
   void parse() {
-    FILE *fptr;
     fptr = fopen(filePath.c_str(), "r");
 
     if (fptr == NULL) {
@@ -92,27 +103,14 @@ public:
       }
 
       csv.insert(*arrP);
+      row++;
       delete arrP;
     }
 
     fclose(fptr);
   }
 
-  void read() {
-    if (csv.length == 0) {
-      cout << "There is no data in the CSV or you haven't parsed it yet.\n";
-      return;
-    }
-
-    for (int i = 0; i < csv.length; i++) {
-      cout << "row ke-" << i << endl;
-      for (int j = 0; j < csv.data->length; j++) {
-        cout << csv.data[i].data[j] << endl;
-      }
-    }
-  }
-
-  Array<string> get(string field) {
+  Array<string> getField(string field) {
     int index;
     Array<string> arr;
 
@@ -129,6 +127,16 @@ public:
     return arr;
   }
 
+  Array<string> getRecord(int index) {
+    Array<string> record;
+
+    for (int i = 0; i < csv.data[index].length; i++) {
+      record.insert(csv.data[index].data[i]);
+    }
+
+    return record;
+  }
+
   Array<string> getHeader() {
     Array<string> arr;
 
@@ -139,10 +147,25 @@ public:
     return arr;
   }
 
-  int length(string field = "all") {
-    if (field != "all")
-      return csv.length - 1;
-    return csv.length;
+  void saveToCSV(Array<string> arr) {
+    fptr = fopen(filePath.c_str(), "a");
+
+    if (fptr == NULL) {
+      perror("Error opening file:");
+      return;
+    }
+
+    string buffer = "";
+    for (int i = 0; i < arr.length; i++) {
+      if (i < arr.length - 1) {
+        buffer += arr.data[i] + ", ";
+      }
+    }
+
+    buffer += ",";
+    fprintf(fptr, "%s", buffer.c_str());
+
+    fclose(fptr);
   }
 };
 
@@ -153,56 +176,503 @@ struct User {
   string password;
   int age;
   string gender;
-  Array<bool> interests;
+  Array<string> interests;
 };
 
 struct Message {
   int id;
   int sender;
   int receiver;
-  string content;
+  string text;
 };
 
-struct Storage {
-  Array<User> users;
-  Array<Message> messages;
-  Array<string> globalInterest;
+struct Like {
+  int likerId;
+  int likedId;
 };
 
-struct App {
-  Storage storage;
+struct Matched {
+  int id;
+  int score;
+};
 
-  void createUser(int id) {};
-  void showProfile(int id) {};
+Array<User> userRepo;
+Array<Message> messageRepo;
+Array<string> globalInterest;
+Array<Like> likeRepo;
 
-  // Array<User> findMatches(int id) {
-  //   Array<int> buffer;
-  //   User &user = storage.users.data[id - 1];
-  //
-  //   for (int i = 0; i < storage.users.length; i++) {
-  //   }
-  // };
+CSV csvInterest("./data/interests.csv");
+CSV csvUser("./data/users.csv");
+CSV csvLike("./data/like.csv");
 
-  void searchProfile(int id) {};
-  void sendMessage(int sender, int receiver) {};
-  void init() {
-    CSV csv("./data/interests.csv");
-    csv.parse();
-    Array<string> arr = csv.getHeader();
+string toLowerCase(string text) {
+  string lowercase = "";
+  for (char x : text) {
+    lowercase += (char)tolower(x);
+  }
+  return lowercase;
+}
 
-    for (int i = 0; i < arr.length; i++) {
-      storage.globalInterest.insert(arr.at(i));
+Array<string> split(string &text, char delimiter) {
+  Array<string> result;
+  if (text == "") {
+    return result;
+  }
+
+  string buffer = "";
+
+  for (int i = 0; i < text.length(); i++) {
+    if (text[i] == delimiter) {
+      result.insert(buffer);
+      buffer = "";
+      continue;
     }
-  };
+    buffer += text[i];
+  }
+
+  return result;
+}
+
+User *getUser(int id) {
+  User *user = nullptr;
+
+  int index = idBinarySearch(userRepo, id);
+
+  if (index == -1) {
+    return user;
+  }
+
+  return &userRepo.data[index];
+}
+
+bool isMatched(int id, int targetId) {
+  bool isLiker = false;
+  bool isLiked = false;
+  for (int i = 0; i < likeRepo.length; i++) {
+    if ((likeRepo.data[i].likerId == id &&
+         likeRepo.data[i].likedId == targetId)) {
+      isLiker = true;
+    }
+    if (likeRepo.data[i].likerId == targetId &&
+        likeRepo.data[i].likedId == id) {
+      isLiked = true;
+    }
+    if (isLiker && isLiked) {
+      return true;
+    }
+  }
+  return false;
+}
+
+void addLike(int likerId, int likedId) {
+  Like like = {likerId, likedId};
+
+  likeRepo.insert(like);
+  Array<string> arr;
+  arr.insert(to_string(like.likerId));
+  arr.insert(to_string(like.likedId));
+  csvLike.saveToCSV(arr);
+}
+
+void viewMessage(int senderId, int receiverId) {
+  User *sender = getUser(senderId);
+  User *receiver = getUser(receiverId);
+
+  for (int i = 0; i < messageRepo.length; i++) {
+
+    if (messageRepo.data[i].sender == sender->id &&
+        messageRepo.data[i].receiver == receiver->id) {
+      if (messageRepo.data[i].sender == sender->id) {
+        cout << "YOU: ";
+      } else {
+        cout << receiver->name << ": ";
+      }
+      cout << messageRepo.data[i].text << "\n";
+    }
+  }
+}
+
+void sendMessage(int sender, int receiver, string text) {
+  Message msg = {messageRepo.length, sender, receiver, text};
+  messageRepo.insert(msg);
+  User *s = getUser(sender);
+  User *r = getUser(receiver);
+};
+
+void createUser(User u, CSV csv) {
+  userRepo.insert(u);
+  Array<string> arr;
+  arr.insert(to_string(u.id));
+  arr.insert(u.name);
+  arr.insert(u.email);
+  arr.insert(u.password);
+  arr.insert(to_string(u.age));
+  arr.insert(u.gender);
+
+  string buffer = "";
+  for (int i = 0; i < u.interests.length; i++) {
+    buffer += u.interests.data[i] + " ";
+  }
+  arr.insert(buffer);
+
+  csv.saveToCSV(arr);
+}
+
+void showProfile(int id, bool isSelf = true) {
+  if (id <= 0)
+    return;
+  User &user = userRepo.data[id - 1];
+  cout << "\n--- PROFILE ---\n";
+  cout << "Name\t\t: " << user.name << endl;
+  cout << "Email\t\t: " << user.email << endl;
+  cout << "Age\t\t: " << user.age << endl;
+  cout << "Gender\t\t: " << user.gender << endl;
+  cout << "Interests\t: ";
+
+  for (int i = 0; i < user.interests.length; i++) {
+    cout << user.interests.at(i) << " ";
+  }
+
+  cout << endl;
+
+  if (isSelf)
+    return;
+
+  bool isMatch = isMatched(currentId, id);
+
+  if (!isMatch &&
+      userRepo.data[currentId - 1].gender != userRepo.data[id - 1].gender) {
+    cout << "Do you like this person?\n";
+    cout << "1. Yes\n";
+    cout << "2. No\n";
+    cout << "0. Neutral\n";
+    int n = input<int>("Answer: ");
+    if (n == 1) {
+      addLike(currentId, id);
+    } else if (n == 0 || 2) {
+      return;
+    }
+  }
+
+  isMatch = isMatched(currentId, id);
+  if (isMatch) {
+    char isMsg;
+    cout << "*** YOU ARE MATCHED!\n";
+    cout << "You and " << userRepo.data[id - 1].name << " liked each other.\n";
+    cout << "Would you like to send a message now? [y/n]: ";
+    cin >> isMsg;
+    cin.ignore();
+
+    if (isMsg == 'y' || isMsg == 'Y') {
+
+      cout << "Send a message or type '###' to close\n";
+      while (true) {
+        string message = input<string>("YOU: ");
+        if (message == "###") {
+          break;
+        }
+        sendMessage(currentId, id, message);
+
+        viewMessage(currentId, id);
+      }
+    }
+  }
+};
+
+template <typename T> T selectToShowProfile(Array<T> &arr) {
+  bool temp = true;
+  int choose;
+  while (true) {
+    choose = input<int>("Select a user number to show user's "
+                        "profile\nor type '0' to quit: ");
+
+    if (choose == 0) {
+      temp = false;
+      break;
+    } else if (choose > arr.length || choose < 0) {
+      cout << "Invalid input. Try again.\n";
+      continue;
+    } else {
+      break;
+    }
+  }
+  return arr.data[choose - 1];
+}
+
+int getMatchesScore(int id, int targetId) {
+  int score = 0;
+  User *currentUser = getUser(id);
+  User *targetUser = getUser(targetId);
+  if (currentUser == nullptr) {
+    cout << "currentUser nullptr\n";
+    return 0;
+  } else if (targetUser == nullptr) {
+    cout << "targetUser nullptr\n";
+    return 0;
+  }
+
+  for (int i = 0; i < (*currentUser).interests.length; i++) {
+    for (int j = 0; j < (*targetUser).interests.length; j++) {
+      if ((*currentUser).interests.at(i) == (*targetUser).interests.at(j)) {
+        score++;
+      }
+    }
+  }
+  return score;
+}
+
+template <typename T> void swapData(T &a, T &b) {
+  T temp = a;
+  a = b;
+  b = temp;
+}
+
+void selectionSort(Array<Matched> &arr, bool isASC = false) {
+  for (int i = 0; i < arr.length; i++) {
+    int index = i;
+    int max = arr.data[i].score;
+    for (int j = i + 1; j < arr.length; j++) {
+      if (arr.data[j].score > max) {
+        max = arr.data[j].score;
+        index = j;
+      }
+    }
+    swapData(arr.data[index], arr.data[i]);
+  }
+}
+
+Array<Matched> findMatches(int id) {
+  Array<Matched> arr;
+  if (id < 0)
+    return arr;
+
+  User *user = getUser(id);
+  if (user == nullptr) {
+    cout << "Can't access current user\n";
+    return arr;
+  }
+
+  for (int i = 0; i < userRepo.length; i++) {
+    if (userRepo.data[i].id == id)
+      continue;
+    int score = getMatchesScore(id, userRepo.data[i].id);
+    arr.insert({userRepo.data[i].id, score});
+  }
+
+  return arr;
+};
+
+Array<int> searchProfile(string name) {
+  Array<int> arr;
+  name = toLowerCase(name);
+  for (int i = 0; i < userRepo.length; i++) {
+    string username = toLowerCase(userRepo.data[i].name);
+    size_t find_i = username.find(name);
+    if (find_i != string::npos) {
+      arr.insert(userRepo.data[i].id);
+    }
+  }
+  return arr;
+};
+
+void init() {
+  csvInterest.parse();
+  csvUser.parse();
+  csvLike.parse();
+  Array<string> arr = csvInterest.getHeader();
+
+  for (int i = 0; i < arr.length; i++) {
+    globalInterest.insert(arr.at(i));
+  }
+
+  string temp;
+  for (int i = 1; i < csvUser.row; i++) {
+    User userTemp;
+    for (int j = 0; j < csvUser.csv.data[i].length; j++) {
+      switch (j) {
+      case 0: {
+        userTemp.id = stoi(csvUser.csv.data[i].data[j]);
+        break;
+      }
+      case 1: {
+        userTemp.name = csvUser.csv.data[i].data[j];
+        break;
+      }
+      case 2: {
+        userTemp.email = csvUser.csv.data[i].data[j];
+        break;
+      }
+      case 3: {
+        userTemp.password = csvUser.csv.data[i].data[j];
+        break;
+      }
+      case 4: {
+        userTemp.age = stoi(csvUser.csv.data[i].data[j]);
+        break;
+      }
+      case 5: {
+        userTemp.gender = csvUser.csv.data[i].data[j];
+        break;
+      }
+      case 6: {
+        Array<string> interest = split(csvUser.csv.data[i].data[j], ' ');
+        for (int k = 0; k < interest.length; k++) {
+          userTemp.interests.insert(interest.data[k]);
+        }
+        break;
+      }
+      }
+    }
+    userRepo.insert(userTemp);
+  }
+
+  for (int i = 1; i < csvLike.row; i++) {
+    Array<string> likes = csvLike.getRecord(i);
+    Like like = {stoi(likes.data[0]), stoi(likes.data[1])};
+    likeRepo.insert(like);
+  }
 };
 
 int main() {
-  App app;
-  app.init();
+  init();
+
+  cout << "Welcome to Dating APP!\n";
+  bool isMenu = true;
+  char menu;
+
+  while (isMenu) {
+
+    cout << "1. Profile\n";
+    cout << "2. View Mathces\n";
+    cout << "3. Search Profile\n";
+    cout << "4. Exit\n";
+    cout << "Choose menu: ";
+    cin >> menu;
+
+    cin.ignore();
+
+    switch (menu) {
+    case '1': {
+      Array<string> userInterests;
+      userInterests.insert("coding");
+      userInterests.insert("traveling");
+      userInterests.insert("photography");
+      User u = {userRepo.length + 1,
+                "Michel Arteta",
+                "arteta@gmail.com",
+                "ar123",
+                21,
+                "Male",
+                userInterests};
+      createUser(u, csvUser);
+      currentId = userRepo.data[userRepo.length - 1].id;
+      cout << currentId << endl;
+      showProfile(currentId);
+      break;
+    }
+    case '2': {
+      Array<Matched> matchedUsers = findMatches(currentId);
+      if (matchedUsers.empty()) {
+        cout << "no matchedUser\n";
+        break;
+      }
+      selectionSort(matchedUsers);
+
+      for (int i = 0; i < matchedUsers.length; i++) {
+        if (matchedUsers.data[i].score == 0) {
+          continue;
+        }
+        User *matchedUser = getUser(matchedUsers.data[i].id);
+        cout << "Name\t\t: " << matchedUser->name << endl;
+        cout << "Age\t\t: " << matchedUser->age << endl;
+        cout << "Interests\t: ";
+
+        for (int j = 0; j < matchedUser->interests.length; j++) {
+          cout << matchedUser->interests.data[j] << " ";
+        }
+        cout << endl;
+        cout << "Matched score\t: " << matchedUsers.data[i].score << endl;
+      }
+
+      int id = selectToShowProfile(matchedUsers).id;
+      showProfile(id, false);
+
+      break;
+    }
+    case '3': {
+      cout << "Search profile\n";
+      string name = input<string>("Search user: ");
+      Array<int> users = searchProfile(name);
+      for (int i = 0; i < users.length; i++) {
+        if (users.length == 1) {
+          showProfile(users.data[i], false);
+          break;
+        }
+        showProfile(users.data[i]);
+      }
+
+      if (users.length > 1) {
+        int id = selectToShowProfile(users);
+        showProfile(id, false);
+      }
+      break;
+    }
+    case '4': {
+      cout << "Thanks.\n";
+      isMenu = false;
+      break;
+    }
+    default: {
+      cout << "Invalid input. Try again.\n";
+      break;
+    }
+    }
+  }
 
   return 0;
 }
 
+template <typename T> int idBinarySearch(T &arr, int id) {
+  if (arr.empty())
+    return -1;
+
+  int first = 0;
+  int end = arr.end();
+
+  while (first <= end) {
+    int mid = (first + end) / 2;
+    if (arr.data[mid].id == id) {
+      return mid;
+    } else {
+      if (arr.data[mid].id > id) {
+        end = mid - 1;
+      } else {
+        first = mid + 1;
+      }
+    }
+  }
+
+  return -1;
+}
+
+template <typename T> int binarySearch(T arr[], T target, int size) {
+  int first = 0;
+  int last = size - 1;
+
+  while (first <= last) {
+    int mid = (first + last) / 2;
+    if (arr[mid] == target) {
+      return mid;
+    }
+    if (arr[mid] > target) {
+      last = mid - 1;
+    } else {
+      first = mid + 1;
+    }
+  }
+
+  return -1;
+}
 template <> string input<string>(string text) {
   string n;
 

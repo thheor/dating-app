@@ -1,8 +1,9 @@
+#include <exception>
 #include <iostream>
 #include <string>
 using namespace std;
 
-int currentId = 1;
+int currentId = -1;
 
 template <typename T> int idBinarySearch(T &arr, int id);
 template <typename T> T input(string text);
@@ -299,7 +300,7 @@ void sendMessage(int sender, int receiver, string text) {
   User *r = getUser(receiver);
 };
 
-void createUser(User u, CSV csv) {
+void createUser(User u) {
   userRepo.insert(u);
   Array<string> arr;
   arr.insert(to_string(u.id));
@@ -315,7 +316,85 @@ void createUser(User u, CSV csv) {
   }
   arr.insert(buffer);
 
-  csv.saveToCSV(arr);
+  csvUser.saveToCSV(arr);
+}
+
+int login(string email, string password) {
+  Array<string> emails = csvUser.getField("email");
+  Array<string> passwords = csvUser.getField("password");
+  Array<string> ids = csvUser.getField("id");
+
+  for (int i = 0; i < csvUser.csv.length; i++) {
+    if (email == emails.data[i] && password == passwords.data[i]) {
+      return stoi(ids.data[i]);
+    }
+  }
+
+  return -1;
+}
+
+int registerUser(User user) {
+  createUser(user);
+  return userRepo.data[userRepo.length - 1].id;
+}
+
+int auth() {
+  cout << "1. Login\n";
+  cout << "2. Register\n";
+  cout << "0. Back\n";
+  int choose = input<int>("Choose: ");
+  switch (choose) {
+  case 1: {
+    cout << "---- LOGIN ----\n";
+    for (int i = 3; i > 0; i--) {
+      string email = input<string>("email: ");
+      string password = input<string>("password: ");
+
+      int id = login(email, password);
+      if (id != -1) {
+        cout << "Login successfully.\n";
+        return id;
+      } else {
+        if (i == 1) {
+          cout << "Too many attempts. Program terminated.\n";
+          return -1000;
+        }
+        cout << "Incorrect email or password. Press enter to try again or '1' "
+                "to register.\n";
+        string press;
+        getline(cin, press, '\n');
+        if (press == "1") {
+          choose = 2;
+        }
+      }
+    }
+    break;
+  }
+  case 2: {
+    cout << "---- REGISTER ----\n";
+    string name = input<string>("username: ");
+    string email = input<string>("email: ");
+    string password = input<string>("email: ");
+    int age = input<int>("age: ");
+    string gender = input<string>("gender: ");
+    string temp = input<string>("interests (separate by space): ");
+    Array<string> interests = split(temp, ' ');
+    User user = {userRepo.length, name,     email, password, age,
+                 gender,          interests};
+
+    int id = registerUser(user);
+    return id;
+  }
+  case 0: {
+    return -1;
+  }
+  default: {
+    cout << "Invalid input. Try again\n";
+    break;
+  }
+  }
+
+  return -1000;
 }
 
 void showProfile(int id, bool isSelf = true) {
@@ -380,14 +459,14 @@ void showProfile(int id, bool isSelf = true) {
 };
 
 template <typename T> T selectToShowProfile(Array<T> &arr) {
-  bool temp = true;
+  T temp = {-1};
   int choose;
   while (true) {
     choose = input<int>("Select a user number to show user's "
                         "profile\nor type '0' to quit: ");
 
     if (choose == 0) {
-      temp = false;
+      return temp;
       break;
     } else if (choose > arr.length || choose < 0) {
       cout << "Invalid input. Try again.\n";
@@ -553,27 +632,32 @@ int main() {
 
     switch (menu) {
     case '1': {
-      Array<string> userInterests;
-      userInterests.insert("coding");
-      userInterests.insert("traveling");
-      userInterests.insert("photography");
-      User u = {userRepo.length + 1,
-                "Michel Arteta",
-                "arteta@gmail.com",
-                "ar123",
-                21,
-                "Male",
-                userInterests};
-      createUser(u, csvUser);
-      currentId = userRepo.data[userRepo.length - 1].id;
-      cout << currentId << endl;
-      showProfile(currentId);
+      if (currentId == -1) {
+        cout << "You are not logged in. Plase login/register first.\n";
+        currentId = auth();
+        if (currentId == -1) {
+          break;
+        } else if (currentId == -1000) {
+          return -1;
+        }
+      } else {
+        showProfile(currentId);
+      }
       break;
     }
     case '2': {
+      if (currentId == -1) {
+        cout << "You are not logged in. Plase login/register first.\n";
+        currentId = auth();
+        if (currentId == -1) {
+          break;
+        } else if (currentId == -1000) {
+          return -1;
+        }
+      }
       Array<Matched> matchedUsers = findMatches(currentId);
       if (matchedUsers.empty()) {
-        cout << "no matchedUser\n";
+        cout << "no matched user\n";
         break;
       }
       selectionSort(matchedUsers);
@@ -594,12 +678,24 @@ int main() {
         cout << "Matched score\t: " << matchedUsers.data[i].score << endl;
       }
 
-      int id = selectToShowProfile(matchedUsers).id;
-      showProfile(id, false);
+      int selected = selectToShowProfile(matchedUsers).id;
+      if (selected == -1) {
+        break;
+      }
+      showProfile(selected, false);
 
       break;
     }
     case '3': {
+      if (currentId == -1) {
+        cout << "You are not logged in. Plase login/register first.\n";
+        currentId = auth();
+        if (currentId == -1) {
+          break;
+        } else if (currentId == -1000) {
+          return -1;
+        }
+      }
       cout << "Search profile\n";
       string name = input<string>("Search user: ");
       Array<int> users = searchProfile(name);

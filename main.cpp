@@ -159,6 +159,8 @@ public:
     for (int i = 0; i < arr.length; i++) {
       if (i < arr.length - 1) {
         buffer += arr.data[i] + ", ";
+      } else {
+        buffer += arr.data[i];
       }
     }
 
@@ -230,6 +232,10 @@ Array<string> split(string &text, char delimiter) {
     buffer += text[i];
   }
 
+  if (text[text.length() - 1] != ' ') {
+    result.insert(buffer);
+  }
+
   return result;
 }
 
@@ -264,6 +270,43 @@ bool isMatched(int id, int targetId) {
   return false;
 }
 
+Array<string> numberToInterest(Array<int> arr) {
+  Array<string> interests;
+  for (int i = 0; i < arr.length; i++) {
+    if (arr.data[i] == 1)
+      interests.insert("coding");
+    if (arr.data[i] == 2)
+      interests.insert("music");
+    if (arr.data[i] == 3)
+      interests.insert("hiking");
+    if (arr.data[i] == 4)
+      interests.insert("cooking");
+    if (arr.data[i] == 5)
+      interests.insert("gaming");
+    if (arr.data[i] == 6)
+      interests.insert("photography");
+    if (arr.data[i] == 7)
+      interests.insert("traveling");
+    if (arr.data[i] == 8)
+      interests.insert("fitness");
+    if (arr.data[i] == 9)
+      interests.insert("reading");
+    if (arr.data[i] == 10)
+      interests.insert("art");
+    if (arr.data[i] == 11)
+      interests.insert("pets");
+    if (arr.data[i] == 12)
+      interests.insert("movies");
+    if (arr.data[i] == 13)
+      interests.insert("coffee");
+    if (arr.data[i] == 14)
+      interests.insert("sports");
+    if (arr.data[i] == 15)
+      interests.insert("gardening");
+  }
+  return interests;
+}
+
 void addLike(int likerId, int likedId) {
   Like like = {likerId, likedId};
 
@@ -272,6 +315,29 @@ void addLike(int likerId, int likedId) {
   arr.insert(to_string(like.likerId));
   arr.insert(to_string(like.likedId));
   csvLike.saveToCSV(arr);
+}
+
+int isLike(int likerId, int likedId) {
+  for (int i = 0; i < likeRepo.length; i++) {
+    if (likeRepo.data[i].likerId == likerId &&
+        likeRepo.data[i].likedId == likedId) {
+      return 1;
+    } else if (likeRepo.data[i].likerId == likedId &&
+               likeRepo.data[i].likedId == likerId) {
+      return 2;
+    }
+  }
+
+  return -1;
+}
+
+void removeLike(int likerId, int likedId) {
+  for (int i = 0; i < likeRepo.length; i++) {
+    if (likeRepo.data[i].likerId == likerId &&
+        likeRepo.data[i].likedId == likedId) {
+      likeRepo.removeAt(i);
+    }
+  }
 }
 
 void viewMessage(int senderId, int receiverId) {
@@ -311,7 +377,10 @@ void createUser(User u) {
 
   string buffer = "";
   for (int i = 0; i < u.interests.length; i++) {
-    buffer += u.interests.data[i] + " ";
+    buffer += u.interests.data[i];
+    if (i < u.interests.length - 1) {
+      buffer += " ";
+    }
   }
   arr.insert(buffer);
 
@@ -330,11 +399,6 @@ int login(string email, string password) {
   }
 
   return -1;
-}
-
-int registerUser(User user) {
-  createUser(user);
-  return userRepo.data[userRepo.length - 1].id;
 }
 
 int auth() {
@@ -373,16 +437,45 @@ int auth() {
     cout << "---- REGISTER ----\n";
     string name = input<string>("username: ");
     string email = input<string>("email: ");
-    string password = input<string>("email: ");
+    string password = input<string>("password: ");
     int age = input<int>("age: ");
-    string gender = input<string>("gender: ");
-    string temp = input<string>("interests (separate by space): ");
-    Array<string> interests = split(temp, ' ');
-    User user = {userRepo.length, name,     email, password, age,
-                 gender,          interests};
+    int g;
+    while (true) {
+      cout << "1. Male\n2. Female\n";
+      g = input<int>("gender: ");
+      if (g > 2 || g < 1) {
+        cout << "Invalid input. Try again.\n";
+      } else {
+        break;
+      }
+    }
+    cout << "---- Select Your Interests ----\n";
+    cout << "1. Coding      6. Photography   11. Pets\n"
+            "2. Music       7. Traveling     12. Movies\n"
+            "3. Hiking      8. Fitness       13. Coffee\n"
+            "4. Cooking     9. Reading       14. Sports\n"
+            "5. Gaming      10. Art          15. Gardening\n";
+    cout << "Enter the numbers of your interests\nType 0 to finish:\n";
+    Array<int> i;
+    while (true) {
+      int n = input<int>("> ");
+      if (n == 0) {
+        break;
+      }
+      if (n > 15 || n < 1) {
+        cout << "Invalid input. Try again\n";
+      } else {
+        i.insert(n);
+      }
+    }
+    Array<string> interests = numberToInterest(i);
+    string gender = g == 1 ? "Male" : "Female";
 
-    int id = registerUser(user);
-    return id;
+    User user = {
+        userRepo.length + 1, name, email, password, age, gender, interests};
+
+    createUser(user);
+    return userRepo.data[userRepo.length - 1].id;
   }
   case 0: {
     return -1;
@@ -418,6 +511,20 @@ void showProfile(int id) {
 
   bool isMatch = isMatched(currentId, id);
 
+  int like = isLike(currentId, id);
+  if (like == 1) {
+    char unlike;
+    cout << "You like this person. Type '1' to unlike: \n";
+    cin >> unlike;
+    cin.ignore();
+    if (unlike == '1') {
+      removeLike(currentId, id);
+    }
+    return;
+  } else if (like == 2) {
+    cout << "This person likes you.\n";
+  }
+
   if (!isMatch &&
       userRepo.data[currentId - 1].gender != userRepo.data[id - 1].gender) {
     cout << "Do you like this person?\n";
@@ -435,7 +542,7 @@ void showProfile(int id) {
   isMatch = isMatched(currentId, id);
   if (isMatch) {
     char isMsg;
-    cout << "*** YOU ARE MATCHED!\n";
+    cout << "*** YOU ARE MATCHED! ***\n";
     cout << "You and " << userRepo.data[id - 1].name << " liked each other.\n";
     cout << "Would you like to send a message now? [y/n]: ";
     cin >> isMsg;
@@ -531,7 +638,7 @@ Array<Matched> findMatches(int id) {
   }
 
   for (int i = 0; i < userRepo.length; i++) {
-    if (userRepo.data[i].id == id)
+    if (userRepo.data[i].id == id || userRepo.data[i].gender == (*user).gender)
       continue;
     int score = getMatchesScore(id, userRepo.data[i].id);
     arr.insert({userRepo.data[i].id, score});

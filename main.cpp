@@ -7,7 +7,6 @@ int currentId = -1;
 template <typename T> int idBinarySearch(T &arr, int id);
 template <typename T> T input(string text);
 template <> string input(string text);
-template <typename T> T binarySearch(T arr[], T target, int size);
 
 template <typename T> struct Array {
   int length;
@@ -487,7 +486,7 @@ int auth() {
   return -1000;
 }
 
-void showProfile(int id, bool isSelf = true) {
+void showProfile(int id) {
   if (id <= 0)
     return;
   User &user = userRepo.data[id - 1];
@@ -504,7 +503,7 @@ void showProfile(int id, bool isSelf = true) {
 
   cout << endl;
 
-  if (isSelf)
+  if (id == currentId)
     return;
 
   bool isMatch = isMatched(currentId, id);
@@ -651,7 +650,7 @@ Array<int> searchProfile(string name) {
   for (int i = 0; i < userRepo.length; i++) {
     string username = toLowerCase(userRepo.data[i].name);
     size_t find_i = username.find(name);
-    if (find_i != string::npos) {
+    if (find_i != string::npos && userRepo.data[i].id != currentId) {
       arr.insert(userRepo.data[i].id);
     }
   }
@@ -783,7 +782,7 @@ int main() {
       if (selected == -1) {
         break;
       }
-      showProfile(selected, false);
+      showProfile(selected);
 
       break;
     }
@@ -800,9 +799,10 @@ int main() {
       cout << "Search profile\n";
       string name = input<string>("Search user: ");
       Array<int> users = searchProfile(name);
+      cout <<"users length " << users.length;
       for (int i = 0; i < users.length; i++) {
         if (users.length == 1) {
-          showProfile(users.data[i], false);
+          showProfile(users.data[i]);
           break;
         }
         showProfile(users.data[i]);
@@ -810,7 +810,7 @@ int main() {
 
       if (users.length > 1) {
         int id = selectToShowProfile(users);
-        showProfile(id, false);
+        showProfile(id);
       }
       break;
     }
@@ -852,24 +852,6 @@ template <typename T> int idBinarySearch(T &arr, int id) {
   return -1;
 }
 
-template <typename T> int binarySearch(T arr[], T target, int size) {
-  int first = 0;
-  int last = size - 1;
-
-  while (first <= last) {
-    int mid = (first + last) / 2;
-    if (arr[mid] == target) {
-      return mid;
-    }
-    if (arr[mid] > target) {
-      last = mid - 1;
-    } else {
-      first = mid + 1;
-    }
-  }
-
-  return -1;
-}
 template <> string input<string>(string text) {
   string n;
 

@@ -5,6 +5,8 @@ using namespace std;
 int currentId = -1;
 
 template <typename T> int idBinarySearch(T &arr, int id);
+template <typename T> int idBinarySearchHelper(T &arr, int id, int first, int end);
+
 template <typename T> T input(string text);
 template <> string input(string text);
 
@@ -609,18 +611,33 @@ template <typename T> void swapData(T &a, T &b) {
   b = temp;
 }
 
-void selectionSort(Array<Matched> &arr, bool isASC = false) {
-  for (int i = 0; i < arr.length; i++) {
-    int index = i;
-    int max = arr.data[i].score;
-    for (int j = i + 1; j < arr.length; j++) {
-      if (arr.data[j].score > max) {
-        max = arr.data[j].score;
-        index = j;
-      }
+int partition(Array<Matched> &arr, int low, int high) {
+  int pivot = arr.data[high].score; 
+  int i = low - 1;                  
+
+  for (int j = low; j < high; j++) {
+    if (arr.data[j].score > pivot) {
+      i++;
+      swapData(arr.data[i], arr.data[j]);
     }
-    swapData(arr.data[index], arr.data[i]);
   }
+  swapData(arr.data[i + 1], arr.data[high]);
+  return i + 1;
+}
+
+void quickSortHelper(Array<Matched> &arr, int low, int high) {
+  if (low < high) {
+    int pi = partition(arr, low, high);
+    quickSortHelper(arr, low, pi - 1);
+    quickSortHelper(arr, pi + 1, high);
+  }
+}
+
+void quickSort(Array<Matched> &arr) {
+  if (arr.length <= 1) {
+    return;
+  }
+  quickSortHelper(arr, 0, arr.length - 1);
 }
 
 Array<Matched> findMatches(int id) {
@@ -760,7 +777,7 @@ int main() {
         cout << "no matched user\n";
         break;
       }
-      selectionSort(matchedUsers);
+      quickSort(matchedUsers);
 
       for (int i = 0; i < matchedUsers.length; i++) {
         if (matchedUsers.data[i].score == 0) {
@@ -829,27 +846,26 @@ int main() {
   return 0;
 }
 
-template <typename T> int idBinarySearch(T &arr, int id) {
-  if (arr.empty())
+template <typename T> int idBinarySearchHelper(T &arr, int id, int first, int end) {
+  if (first > end) {
     return -1;
-
-  int first = 0;
-  int end = arr.end();
-
-  while (first <= end) {
-    int mid = (first + end) / 2;
-    if (arr.data[mid].id == id) {
-      return mid;
-    } else {
-      if (arr.data[mid].id > id) {
-        end = mid - 1;
-      } else {
-        first = mid + 1;
-      }
-    }
   }
 
-  return -1;
+  int mid = first + (end - first) / 2;
+
+  if (arr.data[mid].id == id) {
+    return mid;
+  }else if (arr.data[mid].id > id) {
+    return idBinarySearchHelper(arr, id, first, mid - 1);
+  }else {
+    return idBinarySearchHelper(arr, id, mid + 1, end);
+  }
+}
+
+template <typename T>int idBinarySearch(T &arr, int id) {
+  if (arr.empty())
+    return -1;
+  return idBinarySearchHelper(arr, id, 0, arr.end());
 }
 
 template <> string input<string>(string text) {

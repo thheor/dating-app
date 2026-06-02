@@ -1,4 +1,3 @@
-#include <exception>
 #include <iostream>
 #include <string>
 using namespace std;
@@ -73,7 +72,7 @@ private:
 public:
   Array<Array<string>> csv;
   int row = 0;
-  CSV(string path) : filePath(path) {}
+  CSV(string path) : filePath(path) { parse(); }
 
   void parse() {
     fptr = fopen(filePath.c_str(), "r");
@@ -165,7 +164,7 @@ public:
       }
     }
 
-    buffer += ",";
+    buffer += ",\n";
     fprintf(fptr, "%s", buffer.c_str());
 
     fclose(fptr);
@@ -272,38 +271,14 @@ bool isMatched(int id, int targetId) {
 }
 
 Array<string> numberToInterest(Array<int> arr) {
+  const string interestsMap[15] = {
+      "coding",      "music",     "hiking",  "cooking", "gaming",
+      "photography", "traveling", "fitness", "reading", "art",
+      "pets",        "movies",    "coffee",  "sports",  "gardening"};
+
   Array<string> interests;
   for (int i = 0; i < arr.length; i++) {
-    if (arr.data[i] == 1)
-      interests.insert("coding");
-    if (arr.data[i] == 2)
-      interests.insert("music");
-    if (arr.data[i] == 3)
-      interests.insert("hiking");
-    if (arr.data[i] == 4)
-      interests.insert("cooking");
-    if (arr.data[i] == 5)
-      interests.insert("gaming");
-    if (arr.data[i] == 6)
-      interests.insert("photography");
-    if (arr.data[i] == 7)
-      interests.insert("traveling");
-    if (arr.data[i] == 8)
-      interests.insert("fitness");
-    if (arr.data[i] == 9)
-      interests.insert("reading");
-    if (arr.data[i] == 10)
-      interests.insert("art");
-    if (arr.data[i] == 11)
-      interests.insert("pets");
-    if (arr.data[i] == 12)
-      interests.insert("movies");
-    if (arr.data[i] == 13)
-      interests.insert("coffee");
-    if (arr.data[i] == 14)
-      interests.insert("sports");
-    if (arr.data[i] == 15)
-      interests.insert("gardening");
+    interests.insert(interestsMap[arr.data[i - 1]]);
   }
   return interests;
 }
@@ -366,6 +341,16 @@ void sendMessage(int sender, int receiver, string text) {
   User *r = getUser(receiver);
 };
 
+bool isEmailRegistered(string email) {
+  for (int i = 0; i < userRepo.length; i++) {
+    if (userRepo.data[i].email == email) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 void createUser(User u) {
   userRepo.insert(u);
   Array<string> arr;
@@ -423,8 +408,19 @@ int auth() {
           cout << "Too many attempts. Program terminated.\n";
           return -1000;
         }
-        cout << "Incorrect email or password. Press enter to try again or '1' "
-                "to register.\n";
+        bool isRegistared = isEmailRegistered(email);
+        if (isRegistared) {
+          cout << "Login failed. Try again.\n";
+        } else {
+          char createAccount;
+          cout << "Couldn't find that email address.\nCreate an account? "
+                  "(Y/n): ";
+          cin >> createAccount;
+          cin.ignore();
+          if (createAccount == 'Y' || createAccount == 'y') {
+            goto reg;
+          }
+        }
         string press;
         getline(cin, press, '\n');
         if (press == "1") {
@@ -435,6 +431,7 @@ int auth() {
     break;
   }
   case 2: {
+  reg:
     cout << "---- REGISTER ----\n";
     string name = input<string>("username: ");
     string email = input<string>("email: ");
@@ -662,9 +659,6 @@ Array<int> searchProfile(string name) {
 };
 
 void init() {
-  csvInterest.parse();
-  csvUser.parse();
-  csvLike.parse();
   Array<string> arr = csvInterest.getHeader();
 
   for (int i = 0; i < arr.length; i++) {

@@ -1,12 +1,12 @@
-id, name, email, password, age, gender, interests,
-1, Alice Smith, alice@email.com, password123, 25, Female, music cooking traveling,
-2, Bob Jones, bob@email.com, pass456, 28, Male, music cooking traveling,
-3, Charlie Brown, charlie@email.com, char123, 22, Male, art reading coding,
-4, Diana Prince, diana@email.com, dianaPass, 30, Female, hiking fitness reading,
-5, Ethan Hunt, ethan@email.com, mi6password, 26, Male, gaming movies reading,
-6, Fiona Gallagher, fiona@email.com, fiona99, 24, Female, art reading photography,
-7, George Clark, george@email.com, geoPass, 31, Male, music reading cooking,
-8, Hannah Abbott, hannah@email.com, han123, 27, Female, cooking movies reading,
-9, Ian Malcolm, ian@email.com, dinoPass, 29, Male, traveling coding fitness,
-10, Julia Roberts, julia@email.com, prettyPass, 23, Female, music gaming art,11, rafi@gmail.com, rafi@gmail.com, rafi, 20, Female, coding music photography,
-11, aiko, kohanaaiko37@gmail.com, menggokil, 11, Female, coding photography traveling,
+id,name,email,password,age,gender,interests
+1,Alice Smith,alice@email.com,password123,25,Female,music cooking traveling
+2,Bob Jones,bob@email.com,pass456,28,Male,music cooking traveling
+3,Charlie Brown,charlie@email.com,char123,22,Male,art reading coding
+4,Diana Prince,diana@email.com,dianaPass,30,Female,hiking fitness reading
+5,Ethan Hunt,ethan@email.com,mi6password,26,Male,gaming movies reading
+6,Fiona Gallagher,fiona@email.com,fiona99,24,Female,art reading photography
+7,George Clark,george@email.com,geoPass,31,Male,music reading cooking
+8,Hannah Abbott,hannah@email.com,han123,27,Female,cooking movies reading
+9,Ian Malcolm,ian@email.com,dinoPass,29,Male,traveling coding fitness
+10,Julia Roberts,julia@email.com,prettyPass,23,Female,music gaming art
+11,ilham,ilham@gmail.com,ilham123,23,Male,coding music hiking photography traveling

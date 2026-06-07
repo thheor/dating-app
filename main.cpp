@@ -604,29 +604,37 @@ void showProfile(int id, bool isJustShow = true) {
     return;
   }
 
-  int like = isLike(currentId, id);
-  if (like == 1) {
-    char unlike;
-    cout << "You like this person. Type 'U' to unlike: ";
-    cin >> unlike;
-    cin.ignore();
-    if (unlike == 'U' || unlike == 'u') {
-      removeLike(currentId, id);
-      return;
-    }
-  } else if (like == 2) {
-    cout << "This person likes you.\n";
-  }
-
   bool isMatch = isMatched(currentId, id);
   if (!isMatch &&
       userRepo.data[currentId - 1].gender != userRepo.data[id - 1].gender) {
-    char input;
-    cout << "Type 'Y' if you like this person: ";
-    cin >> input;
-    cin.ignore();
-    if (input == 'Y' || input == 'y') {
-      addLike(currentId, id);
+
+    int like = isLike(currentId, id);
+    if (like == 1) {
+      char unlike;
+      cout << "You like this person. Type 'U' to unlike: ";
+      cin >> unlike;
+      cin.ignore();
+      if (unlike == 'U' || unlike == 'u') {
+        removeLike(currentId, id);
+        return;
+      }
+    } else if (like == 2) {
+      cout << "This person likes you.\n";
+      char input;
+      cout << "Type 'Y' if you like this person: ";
+      cin >> input;
+      cin.ignore();
+      if (input == 'Y' || input == 'y') {
+        addLike(currentId, id);
+      }
+    } else {
+      char input;
+      cout << "Type 'Y' if you like this person: ";
+      cin >> input;
+      cin.ignore();
+      if (input == 'Y' || input == 'y') {
+        addLike(currentId, id);
+      }
     }
   }
 
@@ -990,15 +998,16 @@ Array<string> userToCsvLine(Array<User> users) {
   return arr;
 }
 
-Array<string> likeToCsvLine(Array<Like> likes) {
-  Array<string> arr;
-  string line = "";
-  for (int i = 0; i < likes.length; i++) {
-    line += to_string(likes.data[i].likerId) + ",";
-    line += to_string(likes.data[i].likedId);
-    arr.insert(line);
+Array<string> likeToCsvLine(Array<Like> arr) {
+  Array<string> res;
+  res.insert("likerId,likedId");
+  for (int i = 0; i < arr.length; i++) {
+    string line = "";
+    line += to_string(arr.data[i].likerId) + ",";
+    line += to_string(arr.data[i].likedId);
+    res.insert(line);
   }
-  return arr;
+  return res;
 }
 
 string inputStr(string text) {
